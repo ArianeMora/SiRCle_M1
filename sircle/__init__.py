@@ -18,7 +18,7 @@
 __title__ = 'scircm'
 __description__ = ''
 __url__ = 'https://github.com/ArianeMora/SiRCle_M1.git'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __author__ = 'Ariane Mora'
 __author_email__ = 'ariane.n.mora@gmail.com'
 __license__ = 'GPL3'

@@ -1,25 +1,22 @@
-# sci-RegulatoryClusteringModel
+# sci-RegulatoryClusteringModel Mac M1 version
 [![PyPI](https://img.shields.io/pypi/v/scircm)](https://pypi.org/project/scircm/)
 
-## Python version
-This is all for the python version of our package, if you are interested in the R version please go here: https://github.com/ArianeMora/SiRCleR
-
 If you want to read more about how SiRCle works, please check out our paper: https://www.biorxiv.org/content/10.1101/2022.07.02.498058v1 
+
+Note this is the version which doesn't contain the patient stratification using the VAE since tensorflow doesn't work on the M1 chip.
+
+We will be looking into how we can make this work in the future.
 
 ## Install
 Optionally create a new conda env.
 ```
-conda create --name scircm python=3.8
-conda activate scircm
+conda create --name scircle python=3.8
+conda activate scircle
 ```
 
 ``` 
-pip install scircm
+pip install sircle
 ```
-
-### Note on Mac M1
-Unfortunately, the Mac M1 has some issues with tensorflow, so we have not been able to get our package to work on a M1 
-mac yet. If you get it working please let us know your solution as others may benefit!
 
 ### Note on Windows
 We have tested our code on Windows (10) and Mac (pro) computers, I'm not sure how it would go on a Windows 7 machine so 
@@ -38,7 +35,7 @@ See the examples folder for a proper tutorial with data included that you can ru
 
 #### Quick version
 ```
-from scircm import SciRCM
+from sircle import SciRCM
 # FORMAT must be csv :) 
 prot_file = f'path to the output from protein differential abundence file'
 rna_file = f'path to the output from differential expression analysis file'
@@ -89,49 +86,49 @@ First install Rtools if you haven't done this yet. There are different versions 
 If you don't have conda, you'll need to do the below, first make sure you have reticulate installed.
 
 ```
-install.packages('reticulate')
-```
-Create a new environment and install scircm.
-```
-virtualenv_create(
-      envname = "ml",
-      python = NULL,
-      packages = "scircm",
-      system_site_packages = getOption("reticulate.virtualenv.system_site_packages",
-                                       default = FALSE)
-    )
-```
-Then run the following script!
+#install.packages('BiocManager')
+#BiocManager::install('basilisk')
+library(basilisk)
+# Set this to be the path to the example data we downloaded
+data_dir <- '../data_example/'
 
-```
-library(tidyverse) # install these if you don't have them
-library(dplyr)
-library(reticulate)
+protFile <- paste0(data_dir, 'prot_DE_Stage IV_sircle.csv')
+rnaFile <- paste0(data_dir, 'rna_DE_Stage IV_sircle_renamed-cols.csv')
+methFile <- paste0(data_dir, 'filtered_cpg_DE_Stage IV_sircle.csv')
+# Note if you use gene names here you would need to change this to be the column that has the gene ID in it
+geneId <- 'ensembl_gene_id'
 
-# If things fail here it's because you need to the steps above
-use_condaenv("ml", required = TRUE) # OR use_virtualenv("ml", required = TRUE)  # depending on how you installed it!
-scircm <<- import("scircm")    # Make global
+sircleFileName <- paste0(data_dir, "SircleR-RCM.csv")
 
-prot_file <- 'path to the output from protein differential abundence file'
-rna_file <- 'path to the output from differential expression analysis file'
-meth_file <- 'path to the output from methylation DCpG analysis file'
+# Use basilisk to create an environment we can use
+bas_scircm <- BasiliskEnvironment(envname="simple_sircle",
+                                   pkgname="sircle",
+                                   packages=c("numpy==1.20"),
+                                  pip=c("sircle")
+)
 
-rcm = scircm$SciRCM(meth_file, rna_file, prot_file, 
-             "logFC_rna", "padj_rna", "CpG_Beta_diff", "padj_meth", "logFC_protein", "padj_protein",
-             "ensembl_gene_id", sep=',',
-             rna_padj_cutoff=0.05, 
-             prot_padj_cutoff=0.05, 
-             meth_padj_cutoff=0.05,
-             rna_logfc_cutoff=1.0, 
-             prot_logfc_cutoff=0.5, 
-             meth_diff_cutoff=0.1, 
-             output_dir='',
-             non_coding_genes=['None'],
-             output_filename='RCM_Output.csv',
-             bg_type = '(P&M)|(P&R)|(M&R)'
-         )
-rcm$run()
-df <- rcm$get_df()
+#logFC_rna = column name in your RNA file that has your RNA logFC (same for the protein and CpG)
+#padj_rna = column name in your RNA file that has your padj value (same for protein and CpG)
+#NOTE: these need to be unique from one another since we merge the datasets, if they aren't, you need
+#to update your csv files.
+#Lastly: ensembl_gene_id this is the gene ID column, All must use the same identifier, and this must be
+#labelled the same in each file, if it isn't, update your column names before running.
+res <- basiliskRun(env=bas_scircm, fun=function(args) {
+    rcm <- sircleRCM(rnaFile, methFile, protFile, geneId,  "logFC_rna", "padj_rna", "CpG_Beta_diff", "padj_meth", "logFC_protein", "padj_protein",
+                 outputFileName = sircleFileName, 
+                 envName="simple_sircle")
+    # Do something with pandas
+    return(rcm)
+})
+
+
+# Plot the sircle function
+sirclePlot(sircleFileName, regLabels="Regulation_Grouping_2") 
+
+# Note you need to have the entrez gene ID added to your csv file
+# Run ORA on the groups
+sircleORAHuman(sircleFileName, "entrezgene_id", "Regulation_Grouping_2")
+
 ```
 
 ## Regulatory clustering model 
