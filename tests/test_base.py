@@ -21,8 +21,6 @@ import shutil
 import tempfile
 import unittest
 from sircle import SciRCM
-import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
 
 
 class TestClass(unittest.TestCase):
