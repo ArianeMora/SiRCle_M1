@@ -19,8 +19,7 @@ pip install sircle
 ```
 
 ### Note on Windows
-We have tested our code on Windows (10) and Mac (pro) computers, I'm not sure how it would go on a Windows 7 machine so 
-if you have issues post an issue.
+We have tested our code on Windows (10) and Mac (pro) computers, I'm not sure how it would go on a Windows 7 machine so if you have issues post an issue.
 
 ### Note on libraries/dependenices
 If you find that things don't install please let us know! We've done our best to make it reproducible but different 

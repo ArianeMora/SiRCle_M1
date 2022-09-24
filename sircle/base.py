@@ -22,6 +22,7 @@ from sciutil import SciUtil, SciException
 import matplotlib.pyplot as plt
 from scipy.stats import combine_pvalues
 
+
 class SciRCMException(SciException):
     def __init__(self, message=''):
         Exception.__init__(self, message)
