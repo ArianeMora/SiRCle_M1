@@ -133,7 +133,13 @@ class SciRCM:
                 self.meth_df = meth_file
                 self.rna_df = rna_file
                 self.prot_df = proteomics_file
-
+        self.bg_list = ['(P&M)|(P&R)', '(P&M)|(P&R)|(M&R)', '*', 'P&M&R', 'P|M|R', 'P|R', 'P&R',
+                        'P|(M&R)']
+        if bg_type not in self.bg_list:
+            self.u.err_p(['ERROR: selected background type was not allowed, please choose from one of: ', self.bg_list,
+                          '\n Note: | means OR and & means AND'])
+        else:
+            self.bg_type = bg_type
 
         self.non_coding_genes = non_coding_genes
         # Contains genes for the non-coding region (use for human only).
@@ -185,7 +191,7 @@ class SciRCM:
         # Fill the rest of the values with 0's
         self.merged_df = self.df.copy()
 
-    def run_rcm(self):
+    def run_rcm(self, methylation_background=1.0, rna_background=1.0, protein_background=1.0):
         protein_padjs = self.df[self.prot_padj].values
         protein_logfcs = self.df[self.prot_logfc].values
         rna_padjs = self.df[self.rna_padj].values
@@ -193,6 +199,7 @@ class SciRCM:
         meth_padjs = self.df[self.meth_padj].values
         meth_diffs = self.df[self.meth_diff].values
         reg_label_1, reg_label_2, reg_label_3 = [], [], []
+        background_filter = []
         for i, gene in enumerate(self.df[self.gene_id].values):
             meth_diff = meth_diffs[i]
             meth_padj = meth_padjs[i]
@@ -202,35 +209,62 @@ class SciRCM:
             prot_padj = protein_padjs[i]
 
             methylation_state, rna_state, protein_state = None, None, None
-
+            methylation_bg, rna_bg, protein_bg = None, None, None
             if ~np.isnan(meth_diff) and meth_diff > self.meth_diff_cutoff and meth_padj < self.meth_padj_cutoff:
                 methylation_state = 'Hypermethylation'
+                methylation_bg = 'threshold'
             elif ~np.isnan(meth_diff) and meth_diff < (-1 * self.meth_diff_cutoff) and meth_padj < self.meth_padj_cutoff:
                 methylation_state = 'Hypomethylation'
+                methylation_bg = 'threshold'
             else:
                 methylation_state = 'Methylation No change'
+                if np.isnan(meth_padj):
+                    methylation_bg = 'NS'
+                elif meth_padj < methylation_background:
+                    methylation_bg = 'threshold'
+                else:
+                    methylation_bg = 'NS'
 
             if ~np.isnan(rna_logfc) and rna_logfc > self.rna_logfc_cutoff and rna_padj < self.rna_padj_cutoff:
                 rna_state = 'RNA UP'
+                rna_bg = 'threshold'
             elif ~np.isnan(rna_logfc) and rna_logfc < (- 1 * self.rna_logfc_cutoff) and rna_padj < self.rna_padj_cutoff:
                 rna_state = 'RNA DOWN'
+                rna_bg = 'threshold'
             else:
                 rna_state = 'RNA No change'
+                if np.isnan(rna_padj):
+                    rna_bg = 'NS'
+                elif rna_padj < rna_background:
+                    rna_bg = 'threshold'
+                else:
+                    rna_bg = 'NS'
 
             if ~np.isnan(prot_logfc) and prot_logfc > self.prot_logfc_cutoff and prot_padj < self.prot_padj_cutoff:
                 protein_state = 'Protein UP'
+                protein_bg = 'threshold'
             elif ~np.isnan(prot_logfc) and prot_logfc < (- 1 * self.prot_logfc_cutoff) and prot_padj < self.prot_padj_cutoff:
                 protein_state = 'Protein DOWN'
+                protein_bg = 'threshold'
             elif ~np.isnan(prot_logfc) and prot_logfc < 0 and prot_padj < self.prot_padj_cutoff:  # i.e. sig down but no threshold
                 protein_state = 'Protein DOWN-excluded'
+                protein_bg = 'threshold'
             elif ~np.isnan(prot_logfc) and prot_logfc > 0 and prot_padj < self.prot_padj_cutoff:  # i.e. sig up but no threshold
                 protein_state = 'Protein UP-excluded'
+                protein_bg = 'threshold'
             # Add in a not-detected state
             elif np.isnan(prot_logfc):
                 protein_state = 'Protein Undetected'
+                protein_bg = 'NS'
             else:
                 protein_state = 'Protein No change'
+                if prot_padj < protein_background:
+                    protein_bg = 'threshold'
+                else:
+                    protein_bg = 'NS'
 
+            background = f'{methylation_bg} + {rna_bg} + {protein_bg}'
+            background_filter.append(background)
             state_label = f'{methylation_state} + {rna_state} + {protein_state}'
 
             if state_label == 'Hypermethylation + RNA DOWN + Protein DOWN':  # State 1
@@ -422,13 +456,91 @@ class SciRCM:
                 reg_label_3.append('None')
             # Add the reg group 1
             reg_label_1.append(state_label)
-        self.df[self.reg_grp_1_lbl] = reg_label_1
-        self.df[self.reg_grp_2_lbl] = reg_label_2
-        self.df[self.reg_grp_3_lbl] = reg_label_3
+
         # Now we want to make three new columns that define the states of methylation RNA and protein
         self.df['Methylation'] = [s if s == 'None' else s.split(' + ')[0] for s in reg_label_1]
         self.df['RNA'] = [s if s == 'None' else s.split(' + ')[1] for s in reg_label_1]
         self.df['Protein'] = [s if s == 'None' else s.split(' + ')[2] for s in reg_label_1]
+
+        self.df[self.reg_grp_1_lbl] = reg_label_1
+        self.df[self.reg_grp_2_lbl] = reg_label_2
+        self.df[self.reg_grp_3_lbl] = reg_label_3
+        self.df['Background_filter'] = background_filter
+        # For each of the regulatory labels, apply the background filter depending on what the user chose
+        self.apply_bg_filter()
+
+    def apply_bg_filter(self):
+        bg_type = self.bg_type
+        bg = self.df['Background_filter'].values
+        if bg_type == 'P|(M&R)':  # Protein AND (DNA methylation OR RNA)
+            conds = ['threshold + threshold + NS',  # RNA & Methylation ~Protein
+                     'threshold + threshold + threshold',  # RNA & Methylation & Protein
+                     'threshold + NS + threshold',  # Methylation ~ RNA & protein
+                     'NS + NS + threshold',  # Just protein
+                     'NS + threshold + threshold',  # ~ methylation RNA Protein
+                     ]
+            self.df[f'{self.reg_grp_1_lbl}_filtered'] = [c if bg[i] in conds else 'None' for i, c in enumerate(self.df[self.reg_grp_1_lbl].values)]
+            self.df[f'{self.reg_grp_2_lbl}_filtered'] = [c if bg[i] in conds else 'None' for i, c in enumerate(self.df[self.reg_grp_2_lbl].values)]
+            self.df[f'{self.reg_grp_3_lbl}_filtered'] = [c if bg[i] in conds else 'None' for i, c in enumerate(self.df[self.reg_grp_3_lbl].values)]
+
+        elif bg_type == 'P|M|R':  # Protein OR methylation OR RNA
+            conds = ['NS + NS + NS']  # i.e. only one we don't want is NS
+            self.df[f'{self.reg_grp_1_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_1_lbl].values)]
+            self.df[f'{self.reg_grp_2_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_2_lbl].values)]
+            self.df[f'{self.reg_grp_3_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_3_lbl].values)]
+
+        elif bg_type == 'P|R':  # Protein OR RNA
+            conds = ['NS + NS + NS', 'threshold + NS + NS']  # i.e. only one we don't want is NS in protein and RNA
+            self.df[f'{self.reg_grp_1_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_1_lbl].values)]
+            self.df[f'{self.reg_grp_2_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_2_lbl].values)]
+            self.df[f'{self.reg_grp_3_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_3_lbl].values)]
+
+        elif bg_type == 'P&R':  # Protein AND RNA
+            conds = ['threshold + threshold + threshold',  # RNA & Methylation ~Protein
+                     'NS + threshold + threshold',  # Methylation ~ RNA & protein
+                     ]
+            self.df[f'{self.reg_grp_1_lbl}_filtered'] = [c if bg[i] in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_1_lbl].values)]
+            self.df[f'{self.reg_grp_2_lbl}_filtered'] = [c if bg[i] in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_2_lbl].values)]
+            self.df[f'{self.reg_grp_3_lbl}_filtered'] = [c if bg[i] in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_3_lbl].values)]
+
+        elif bg_type == 'P&M&R':  # Protein AND Methylation AND RNA
+            conds = ['threshold + threshold + threshold']
+            self.df[f'{self.reg_grp_1_lbl}_filtered'] = [c if bg[i] in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_1_lbl].values)]
+            self.df[f'{self.reg_grp_2_lbl}_filtered'] = [c if bg[i] in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_2_lbl].values)]
+            self.df[f'{self.reg_grp_3_lbl}_filtered'] = [c if bg[i] in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_3_lbl].values)]
+        elif bg_type == '(P&M)|(P&R)|(M&R)':  # At least two are significant
+            conds = ['NS + NS + NS', 'NS + NS + threshold', 'NS + threshold + NS', 'threshold + NS + NS']
+            self.df[f'{self.reg_grp_1_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_1_lbl].values)]
+            self.df[f'{self.reg_grp_2_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_2_lbl].values)]
+            self.df[f'{self.reg_grp_3_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_3_lbl].values)]
+        elif bg_type == '(P&M)|(P&R)':  # Protein and one other
+            conds = ['NS + NS + NS', 'NS + NS + threshold', 'NS + threshold + NS', 'threshold + NS + NS',
+                     'threshold + NS + NS']
+            self.df[f'{self.reg_grp_1_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_1_lbl].values)]
+            self.df[f'{self.reg_grp_2_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_2_lbl].values)]
+            self.df[f'{self.reg_grp_3_lbl}_filtered'] = [c if bg[i] not in conds else 'None' for i, c in
+                                                         enumerate(self.df[self.reg_grp_3_lbl].values)]
+        elif bg_type == '*':  # Use all genes as the background
+            self.df[f'{self.reg_grp_1_lbl}_filtered'] = [c for i, c in enumerate(self.df[self.reg_grp_1_lbl].values)]
+            self.df[f'{self.reg_grp_2_lbl}_filtered'] = [c for i, c in enumerate(self.df[self.reg_grp_2_lbl].values)]
+            self.df[f'{self.reg_grp_3_lbl}_filtered'] = [c for i, c in enumerate(self.df[self.reg_grp_3_lbl].values)]
 
     def get_df(self):
         return self.df
