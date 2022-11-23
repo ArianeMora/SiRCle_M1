@@ -69,21 +69,37 @@ class TestSciRCM(TestClass):
                  reg_grp_3_lbl='Regulation_Grouping_3',
                  main_reg_label='Regulation_Grouping_2'
         """
-        rcm = SciRCM(self.meth_file, self.rna_file, self.prot_file, "logFC_r", "padj_r", "logFC_m", "padj_m",
-                     "logFC_p", "padj_p", "gene_name", sep=',',  bg_type='(P&M)|(P&R)',
-                     rna_padj_cutoff=0.05, prot_padj_cutoff=0.05, meth_padj_cutoff=0.05,
-                     rna_logfc_cutoff=0.5, prot_logfc_cutoff=0.1, meth_diff_cutoff=10,
+        rcm_file = 'data/all_1311.csv'
+
+        rcm = SciRCM('data/Table1_meth.csv', 'data/Table1_rna.csv', 'data/Table1_protein.csv',
+                     "rna_logFC", "rna_padj", "meth_diff", "meth_padj",
+                     "protein_logFC", "protein_padj", "gene_name", sep=',',  bg_type='(P&M)|(P&R)',
+                     rna_padj_cutoff=0.05, prot_padj_cutoff=0.05, meth_padj_cutoff=0.1,
+                     rna_logfc_cutoff=0.5, prot_logfc_cutoff=0.1, meth_diff_cutoff=0.1,
                      )
         rcm.run()
         # Read in the output file
         df = rcm.get_df()
-        df.to_csv("test.csv")
+        print(df.columns)
         # Check the "label" column equals the reg label colum
-        true_labels = df['label'].values
+        true_labels = df['Regulation Grouping 2_New_m'].values
+        genes = df['gene_name'].values
         for i, tst_label in enumerate(df['Regulation_Grouping_2'].values):
             if true_labels[i]:  # Otherwise we'd be testing between 0 and null
-                assert true_labels[i] == tst_label
+                print(genes[i])
+                assert true_labels[i].strip() == tst_label
             else:
+                print(genes[i])
+                assert tst_label == "None"
+        # Check the "label" column equals the reg label colum
+        true_labels = df['Regulation Grouping 3_m'].values
+        genes = df['gene_name'].values
+        for i, tst_label in enumerate(df['Regulation_Grouping_3'].values):
+            if true_labels[i]:  # Otherwise we'd be testing between 0 and null
+                print(genes[i])
+                assert true_labels[i].strip() == tst_label
+            else:
+                print(genes[i])
                 assert tst_label == "None"
 
     def test_rcm_simple(self):

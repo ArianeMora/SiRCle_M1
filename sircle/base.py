@@ -247,17 +247,17 @@ class SciRCM:
                 protein_state = 'Protein DOWN'
                 protein_bg = 'threshold'
             elif ~np.isnan(prot_logfc) and prot_logfc < 0 and prot_padj < self.prot_padj_cutoff:  # i.e. sig down but no threshold
-                protein_state = 'Protein DOWN-excluded'
+                protein_state = 'Protein significant-negative'
                 protein_bg = 'threshold'
             elif ~np.isnan(prot_logfc) and prot_logfc > 0 and prot_padj < self.prot_padj_cutoff:  # i.e. sig up but no threshold
-                protein_state = 'Protein UP-excluded'
+                protein_state = 'Protein significant-positive'
                 protein_bg = 'threshold'
             # Add in a not-detected state
             elif np.isnan(prot_logfc):
                 protein_state = 'Protein Undetected'
                 protein_bg = 'NS'
             else:
-                protein_state = 'Protein No change'
+                protein_state = 'Protein not-significant'
                 if prot_padj < protein_background:
                     protein_bg = 'threshold'
                 else:
@@ -277,16 +277,16 @@ class SciRCM:
                 reg_label_2.append('TPDE+TMDS')
                 reg_label_3.append('TMDS')
 
-            elif state_label == 'Hypermethylation + RNA DOWN + Protein No change':  # State 4
-                reg_label_2.append('MDS+TMDE')
-                reg_label_3.append('MDS')
-            elif state_label == 'Hypermethylation + RNA No change + Protein No change':  # State 5
+            elif state_label == 'Hypermethylation + RNA DOWN + Protein not-significant':  # State 4
+                reg_label_2.append('MDS')
+                reg_label_3.append('None')
+            elif state_label == 'Hypermethylation + RNA No change + Protein not-significant':  # State 5
                 reg_label_2.append('None')  # This would only be included if we have the non-coding groups
                 reg_label_3.append('None')
                 state_label = 'None'
-            elif state_label == 'Hypermethylation + RNA UP + Protein No change':  # State 6
-                reg_label_2.append('TPDE+TMDS')
-                reg_label_3.append('TPDE')
+            elif state_label == 'Hypermethylation + RNA UP + Protein not-significant':  # State 6
+                reg_label_2.append('TPDE')
+                reg_label_3.append('None')
 
             elif state_label == 'Hypermethylation + RNA DOWN + Protein Undetected':  # State 7
                 reg_label_2.append('MDS')
@@ -309,27 +309,27 @@ class SciRCM:
                 reg_label_2.append('TPDE')
                 reg_label_3.append('TPDE')
 
-            elif state_label == 'Hypermethylation + RNA DOWN + Protein UP-excluded':  # State 10
+            elif state_label == 'Hypermethylation + RNA DOWN + Protein significant-positive':  # State 10
                 reg_label_2.append('MDS+TMDE')
-                reg_label_3.append('MDS')
-            elif state_label == 'Hypermethylation + RNA No change + Protein UP-excluded':  # State 11
+                reg_label_3.append('TMDE')
+            elif state_label == 'Hypermethylation + RNA No change + Protein significant-positive':  # State 11
                 reg_label_2.append('None')
                 reg_label_3.append('None')
                 state_label = 'None'
-            elif state_label == 'Hypermethylation + RNA UP + Protein UP-excluded':  # State 12
+            elif state_label == 'Hypermethylation + RNA UP + Protein significant-positive':  # State 12
                 reg_label_2.append('TPDE')
                 reg_label_3.append('TPDE')
 
-            elif state_label == 'Hypermethylation + RNA DOWN + Protein DOWN-excluded':  # State 10
+            elif state_label == 'Hypermethylation + RNA DOWN + Protein significant-negative':  # State 10
                 reg_label_2.append('MDS')
-                reg_label_3.append('TMDE')
-            elif state_label == 'Hypermethylation + RNA No change + Protein DOWN-excluded':  # State 11
+                reg_label_3.append('MDS')
+            elif state_label == 'Hypermethylation + RNA No change + Protein significant-negative':  # State 11
                 reg_label_2.append('None')
                 reg_label_3.append('None')
                 state_label = 'None'
-            elif state_label == 'Hypermethylation + RNA UP + Protein DOWN-excluded':  # State 12
-                reg_label_2.append('TPDE-TMDS')
-                reg_label_3.append('TPDE')
+            elif state_label == 'Hypermethylation + RNA UP + Protein significant-negative':  # State 12
+                reg_label_2.append('TPDE+TMDS')
+                reg_label_3.append('TMDS')
 
             # The same for hypomethylation
             elif state_label == 'Hypomethylation + RNA DOWN + Protein DOWN':  # State 13
@@ -342,16 +342,16 @@ class SciRCM:
                 reg_label_2.append('MDE+TMDS')
                 reg_label_3.append('TMDS')
 
-            elif state_label == 'Hypomethylation + RNA DOWN + Protein No change':  # State 16
-                reg_label_2.append('TPDS+TMDE')
-                reg_label_3.append('TPDS')
-            elif state_label == 'Hypomethylation + RNA No change + Protein No change':  # State 17
+            elif state_label == 'Hypomethylation + RNA DOWN + Protein not-significant':  # State 16
+                reg_label_2.append('TPDS')
+                reg_label_3.append('None')
+            elif state_label == 'Hypomethylation + RNA No change + Protein not-significant':  # State 17
                 reg_label_2.append('None')  # This would only be included if we have the non-coding groups
                 reg_label_3.append('None')
                 state_label = 'None'
-            elif state_label == 'Hypomethylation + RNA UP + Protein No change':  # State 18
-                reg_label_2.append('MDE+TMDS')
-                reg_label_3.append('MDE')
+            elif state_label == 'Hypomethylation + RNA UP + Protein not-significant':  # State 18
+                reg_label_2.append('MDE')
+                reg_label_3.append('None')
 
             elif state_label == 'Hypomethylation + RNA DOWN + Protein UP':  # State 19
                 reg_label_2.append('TPDS+TMDE')
@@ -374,15 +374,26 @@ class SciRCM:
                 reg_label_2.append('MDE')
                 reg_label_3.append('MDE')
 
-            elif state_label == 'Hypomethylation + RNA DOWN + Protein DOWN-excluded':  # State 13
+            elif state_label == 'Hypomethylation + RNA DOWN + Protein significant-negative':  # State 13
                 reg_label_2.append('TPDS')
                 reg_label_3.append('TPDS')
-            elif state_label == 'Hypomethylation + RNA No change + Protein DOWN-excluded':  # State 14
+            elif state_label == 'Hypomethylation + RNA No change + Protein significant-negative':  # State 14
                 reg_label_2.append('None')
                 reg_label_3.append('None')
                 state_label = 'None'
-            elif state_label == 'Hypomethylation + RNA UP + Protein DOWN-excluded':  # State 15
+            elif state_label == 'Hypomethylation + RNA UP + Protein significant-negative':  # State 15
                 reg_label_2.append('MDE+TMDS')
+                reg_label_3.append('TMDS')
+
+            elif state_label == 'Hypomethylation + RNA DOWN + Protein significant-positive':
+                reg_label_2.append('TPDS+TMDE')
+                reg_label_3.append('TMDE')
+            elif state_label == 'Hypomethylation + RNA No change + Protein significant-positive':  # State 14
+                reg_label_2.append('None')
+                reg_label_3.append('None')
+                state_label = 'None'
+            elif state_label == 'Hypomethylation + RNA UP + Protein significant-positive':  # State 15
+                reg_label_2.append('MDE')
                 reg_label_3.append('MDE')
 
             # Same for no-change
@@ -396,16 +407,16 @@ class SciRCM:
                 reg_label_2.append('TPDE+TMDS')
                 reg_label_3.append('TMDS')
 
-            elif state_label == 'Methylation No change + RNA DOWN + Protein No change':  # State 28
-                reg_label_2.append('TPDS+TMDE')
-                reg_label_3.append('TPDS')
-            elif state_label == 'Methylation No change + RNA No change + Protein No change':  # State 29
+            elif state_label == 'Methylation No change + RNA DOWN + Protein not-significant':  # State 28
+                reg_label_2.append('TPDS')
+                reg_label_3.append('None')
+            elif state_label == 'Methylation No change + RNA No change + Protein not-significant':  # State 29
                 reg_label_2.append('None')  # This would only be included if we have the non-coding groups
                 reg_label_3.append('None')
                 state_label = 'None'
-            elif state_label == 'Methylation No change + RNA UP + Protein No change':  # State 30
-                reg_label_2.append('TPDE+TMDS')
-                reg_label_3.append('TPDE')
+            elif state_label == 'Methylation No change + RNA UP + Protein not-significant':  # State 30
+                reg_label_2.append('TPDE')
+                reg_label_3.append('None')
 
             elif state_label == 'Methylation No change + RNA DOWN + Protein Undetected':  # State 31
                 reg_label_2.append('TPDS')
@@ -428,26 +439,26 @@ class SciRCM:
                 reg_label_2.append('TPDE')
                 reg_label_3.append('TPDE')
 
-            elif state_label == 'Methylation No change + RNA DOWN + Protein UP-excluded':  # State 34
-                reg_label_2.append('TMDE')
+            elif state_label == 'Methylation No change + RNA DOWN + Protein significant-positive':  # State 34
+                reg_label_2.append('TPDS+TMDE')
                 reg_label_3.append('TMDE')
-            elif state_label == 'Methylation No change + RNA No change + Protein UP-excluded':  # State 35
+            elif state_label == 'Methylation No change + RNA No change + Protein significant-positive':  # State 35
                 reg_label_2.append('None')
                 reg_label_3.append('None')
                 state_label = 'None'
-            elif state_label == 'Methylation No change + RNA UP + Protein UP-excluded':  # State 36
+            elif state_label == 'Methylation No change + RNA UP + Protein significant-positive':  # State 36
                 reg_label_2.append('TPDE')
                 reg_label_3.append('TPDE')
 
-            elif state_label == 'Methylation No change + RNA DOWN + Protein DOWN-excluded':  # State 25
+            elif state_label == 'Methylation No change + RNA DOWN + Protein significant-negative':  # State 25
                 reg_label_2.append('TPDS')
                 reg_label_3.append('TPDS')
-            elif state_label == 'Methylation No change + RNA No change + Protein DOWN-excluded':  # State 26
+            elif state_label == 'Methylation No change + RNA No change + Protein significant-negative':  # State 26
                 reg_label_2.append('None')
                 reg_label_3.append('None')
                 state_label = 'None'
-            elif state_label == 'Methylation No change + RNA UP + Protein DOWN-excluded':  # State 27
-                reg_label_2.append('TMDS')
+            elif state_label == 'Methylation No change + RNA UP + Protein significant-negative':  # State 27
+                reg_label_2.append('TPDE+TMDS')
                 reg_label_3.append('TMDS')
 
             else:
