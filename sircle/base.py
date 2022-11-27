@@ -94,11 +94,11 @@ class SciRCM:
                  bg_type='P|(M&R)',
                  sciutil=None,
                  logfile=None,
-                 reg_grp_1_lbl='Regulation_Grouping_1',
-                 reg_grp_2_lbl='Regulation_Grouping_2',
-                 reg_grp_3_lbl='Regulation_Grouping_3',
-                 main_reg_label='Regulation_Grouping_2',
-                 reg_grp_4_lbl='Regulation_Grouping_A'):
+                 reg_grp_1_lbl='RegulationGrouping_All',
+                 reg_grp_2_lbl='RegulationGrouping_Detection',
+                 reg_grp_3_lbl='RegulationGrouping_Protein',
+                 main_reg_label='RegulationGrouping_Changes',
+                 reg_grp_4_lbl='RegulationGrouping_Changes'):
         self.u = SciUtil() if sciutil is None else sciutil
         plt.rcParams['svg.fonttype'] = 'none'
         self.meth_diff = meth_diff
