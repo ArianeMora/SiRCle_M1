@@ -73,7 +73,7 @@ class TestSciRCM(TestClass):
 
         rcm = SciRCM('data/Table1_meth.csv', 'data/Table1_rna.csv', 'data/Table1_protein.csv',
                      "rna_logFC", "rna_padj", "meth_diff", "meth_padj",
-                     "protein_logFC", "protein_padj", "gene_name", sep=',',  bg_type='(P&M)|(P&R)',
+                     "protein_logFC", "protein_padj", "gene_name", sep=',',  bg_type='*',
                      rna_padj_cutoff=0.05, prot_padj_cutoff=0.05, meth_padj_cutoff=0.1,
                      rna_logfc_cutoff=0.5, prot_logfc_cutoff=0.1, meth_diff_cutoff=0.1,
                      )
@@ -101,6 +101,18 @@ class TestSciRCM(TestClass):
             else:
                 print(genes[i])
                 assert tst_label == "None"
+        # Check the "label" column equals the reg label colum
+        true_labels = df['Regulation Grouping 2_Old_m'].values
+        genes = df['gene_name'].values
+        full_label = df['Regulation_Grouping_1'].values
+        for i, tst_label in enumerate(df['Regulation_Grouping_A'].values):
+            if true_labels[i]:  # Otherwise we'd be testing between 0 and null
+                print(genes[i], full_label[i], true_labels[i].strip(), tst_label)
+                if 'ncRNA' not in true_labels[i].strip():
+                    assert true_labels[i].strip() == tst_label
+            else:
+                print(genes[i])
+                assert tst_label == "None"
 
     def test_rcm_simple(self):
         """ Test RCM that has all sig but misses out on the change."""
@@ -108,8 +120,8 @@ class TestSciRCM(TestClass):
         rcm = SciRCM(f'{self.data_dir}/meth_rcm.csv', f'{self.data_dir}/rna_rcm.csv', f'{self.data_dir}/prot_rcm.csv',
                      "rna_logfc", "rna_padj", "meth_diff", "meth_padj",
                      "prot_logfc", "prot_padj", "gene_name", sep=',',  bg_type='(P&M)|(P&R)',
-                     rna_padj_cutoff=0.05, prot_padj_cutoff=0.05, meth_padj_cutoff=0.05,
-                     rna_logfc_cutoff=0.5, prot_logfc_cutoff=0.1, meth_diff_cutoff=10)
+                     rna_padj_cutoff=0.5, prot_padj_cutoff=0.05, meth_padj_cutoff=0.1,
+                     rna_logfc_cutoff=0, prot_logfc_cutoff=0.1, meth_diff_cutoff=0)
         rcm.run()
         # Read in the output file
         df = rcm.get_df()
